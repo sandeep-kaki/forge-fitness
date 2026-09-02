@@ -1,0 +1,12 @@
+{
+  "name": "Forge — Personal Gym Coach",
+  "short_name": "Forge",
+  "description": "A calm, personal gym coach that works around your plan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101916",
+  "theme_color": "#101916",
+  "icons": [
+    { "src": "/forge-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
