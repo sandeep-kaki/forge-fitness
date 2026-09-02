@@ -1,8 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { equipmentCatalog } from '../data/equipment'
 import { APP_SCHEMA_VERSION, type ExperienceLevel, type LocalAppData, type TrainingGoal } from '../domain/types'
 
 type OnboardingProps = { onComplete: (data: LocalAppData) => void }
+type OnboardingDraft = { step: number; name: string; goal: TrainingGoal; days: number[]; duration: 30 | 45 | 60; time: string; experience: ExperienceLevel; equipment: string[]; medical: boolean; emergency: boolean }
+const DRAFT_KEY = 'forge-onboarding-draft-v1'
+const initialDraft: OnboardingDraft = { step: 0, name: '', goal: 'muscle_gain', days: [1, 2, 4], duration: 45, time: '09:00', experience: 'beginner', equipment: ['dumbbells', 'adjustable-bench'], medical: false, emergency: false }
+function loadDraft(): OnboardingDraft { try { const stored = sessionStorage.getItem(DRAFT_KEY); if (!stored) return initialDraft; const draft = JSON.parse(stored) as Partial<OnboardingDraft>; return { ...initialDraft, ...draft } } catch { return initialDraft } }
+export function canProceed(draft: OnboardingDraft): boolean { if (draft.step === 0) return draft.name.trim().length > 0; if (draft.step === 2) return draft.days.length > 0; if (draft.step === 7) return draft.medical && draft.emergency; return true }
 const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const goals: { id: TrainingGoal; title: string; text: string }[] = [
   { id: 'muscle_gain', title: 'Build muscle', text: 'Gain strength and muscle gradually.' },
@@ -12,25 +17,20 @@ const goals: { id: TrainingGoal; title: string; text: string }[] = [
 ]
 
 export function Onboarding({ onComplete }: OnboardingProps) {
-  const [step, setStep] = useState(0)
-  const [name, setName] = useState('')
-  const [goal, setGoal] = useState<TrainingGoal>('muscle_gain')
-  const [days, setDays] = useState<number[]>([1, 2, 4])
-  const [duration, setDuration] = useState<30 | 45 | 60>(45)
-  const [time, setTime] = useState('09:00')
-  const [experience, setExperience] = useState<ExperienceLevel>('beginner')
-  const [equipment, setEquipment] = useState<string[]>(['dumbbells', 'adjustable-bench'])
-  const [medical, setMedical] = useState(false)
-  const [emergency, setEmergency] = useState(false)
+  const [draft, setDraft] = useState<OnboardingDraft>(loadDraft)
+  const { step, name, goal, days, duration, time, experience, equipment, medical, emergency } = draft
+  const setStep = (next: number | ((current: number) => number)) => setDraft((current) => ({ ...current, step: typeof next === 'function' ? next(current.step) : next }))
+  const setName = (name: string) => setDraft((current) => ({ ...current, name })); const setGoal = (goal: TrainingGoal) => setDraft((current) => ({ ...current, goal })); const setDays = (days: number[] | ((current: number[]) => number[])) => setDraft((current) => ({ ...current, days: typeof days === 'function' ? days(current.days) : days })); const setDuration = (duration: 30 | 45 | 60) => setDraft((current) => ({ ...current, duration })); const setTime = (time: string) => setDraft((current) => ({ ...current, time })); const setExperience = (experience: ExperienceLevel) => setDraft((current) => ({ ...current, experience })); const setEquipment = (equipment: string[] | ((current: string[]) => string[])) => setDraft((current) => ({ ...current, equipment: typeof equipment === 'function' ? equipment(current.equipment) : equipment })); const setMedical = (medical: boolean) => setDraft((current) => ({ ...current, medical })); const setEmergency = (emergency: boolean) => setDraft((current) => ({ ...current, emergency }))
+  useEffect(() => { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)) }, [draft])
   const toggleDay = (day: number) => setDays((current) => current.includes(day) ? current.filter((item) => item !== day) : [...current, day].sort())
   const toggleEquipment = (id: string) => setEquipment((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   const next = () => setStep((current) => Math.min(current + 1, 7))
   const previous = () => setStep((current) => Math.max(current - 1, 0))
   const finish = () => {
     const now = new Date().toISOString(); const profileId = crypto.randomUUID()
-    onComplete({ schemaVersion: APP_SCHEMA_VERSION, profile: { id: profileId, displayName: name.trim() || 'Athlete', goal, experience, availableDays: days, preferredDurationMinutes: duration, preferredTrainingTime: time, createdAt: now, updatedAt: now }, inventory: { profileId, availableEquipmentIds: equipment, updatedAt: now }, safety: { acknowledgedAt: now, version: 1, understandsEmergencyStop: emergency, understandsNotMedicalAdvice: medical }, workoutSettings: { preferredDurationMinutes: duration, voiceEnabled: false, announceRestCountdown: false }, appSettings: { theme: 'dark', reducedMotion: false, schemaVersion: APP_SCHEMA_VERSION }, plans: [] })
+    onComplete({ schemaVersion: APP_SCHEMA_VERSION, profile: { id: profileId, displayName: name.trim() || 'Athlete', goal, experience, availableDays: days, preferredDurationMinutes: duration, preferredTrainingTime: time, createdAt: now, updatedAt: now }, inventory: { profileId, availableEquipmentIds: equipment, updatedAt: now }, safety: { acknowledgedAt: now, version: 1, understandsEmergencyStop: emergency, understandsNotMedicalAdvice: medical }, workoutSettings: { preferredDurationMinutes: duration, voiceEnabled: false, announceRestCountdown: false }, appSettings: { theme: 'dark', reducedMotion: false, schemaVersion: APP_SCHEMA_VERSION }, plans: [] }); sessionStorage.removeItem(DRAFT_KEY)
   }
-  const canContinue = step === 0 ? name.trim().length > 0 : step === 2 ? days.length > 0 : step === 6 ? medical && emergency : true
+  const canContinue = canProceed(draft)
   return <main className="onboarding"><header className="onboard-top"><div className="wordmark"><span>F</span>FORGE</div><span className="onboard-count">{step + 1} / 8</span></header><div className="onboard-progress"><i style={{ width: `${((step + 1) / 8) * 100}%` }} /></div><section className="onboard-content">
     {step === 0 && <><p className="eyebrow">WELCOME TO FORGE</p><h1>Let’s make the gym feel simpler.</h1><p>First, what should we call you?</p><label className="name-field"><span>Your first name</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" maxLength={32} /></label></>}
     {step === 1 && <><p className="eyebrow">YOUR DIRECTION</p><h1>What matters most right now?</h1><p>Your plan will be shaped around this—not the other way around.</p><div className="choice-list">{goals.map((item) => <button className={goal === item.id ? 'choice selected' : 'choice'} key={item.id} onClick={() => setGoal(item.id)}><span><strong>{item.title}</strong><small>{item.text}</small></span><b>{goal === item.id ? '✓' : ''}</b></button>)}</div></>}
