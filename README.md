@@ -13,7 +13,7 @@ The shell is deliberately organized around independent domains:
 - `BodyWeightEntry`: history / analytics input
 - `AppSettings`: device-local settings and schema version
 
-The types live in `src/domain/types.ts`. The contents in `src/data/sampleContent.ts` are visual-only seed data, not workout behavior. Milestone 2 will add validated local persistence, onboarding, and structured plan import; Milestone 4 will make the engine execute the active user plan.
+The types live in `src/domain/types.ts`. The contents in `src/data/sampleContent.ts` are visual-only seed data, not workout behavior. Milestone 2 adds an eight-step onboarding flow plus a versioned IndexedDB bundle containing the active profile, equipment inventory, safety acknowledgement, workout settings, and app settings. The bundle includes a plan slot but does not execute plans. Milestone 3 adds the bundled curated exercise library in `src/data/exerciseLibrary.ts`, including safety, substitution, and optional verified-video metadata. Structured plan import should then populate the plan slot before Milestone 4 makes the engine execute the active user's plan.
 
 ## Local development
 
@@ -24,7 +24,11 @@ npm install
 npm run dev
 ```
 
-Then open the local URL printed by Vite. Use `npm run typecheck` for strict TypeScript validation and `npm run build` for the production bundle.
+Then open the local URL printed by Vite. Use `npm test` for persistence/schema tests, `npm run typecheck` for strict TypeScript validation, and `npm run build` for the production bundle.
+
+## Structured plan import
+
+The Workout screen accepts JSON with `title`, seven `schedule` entries, and `workoutDays`. Each workout exercise must use an `exerciseId` already present in the bundled library, plus `sets`, a `repRange`, `restSeconds`, and `priority` (`primary` or `accessory`). Imported plans are versioned data saved locally; the resolver selects compatible exercises or a ranked, available substitute. It never invents a starting weight.
 
 ## PWA installation
 

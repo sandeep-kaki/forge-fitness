@@ -1,0 +1,7 @@
+import type { WorkoutPlan } from '../domain/types'
+
+/** Optional generic template data, never engine logic and never automatically assigned to a user. */
+export function createFoundationStarterPlan(profileId: string): WorkoutPlan {
+  return { id: crypto.randomUUID(), profileId, version: 1, title: 'Foundation Strength', status: 'draft', source: 'seed', createdAt: new Date().toISOString(), schedule: [{ dayOfWeek: 1, workoutDayId: 'upper-a', intent: 'workout' }, { dayOfWeek: 2, workoutDayId: 'lower-a', intent: 'workout' }, { dayOfWeek: 3, intent: 'rest' }, { dayOfWeek: 4, workoutDayId: 'upper-b', intent: 'workout' }, { dayOfWeek: 5, workoutDayId: 'lower-b', intent: 'workout' }, { dayOfWeek: 6, intent: 'optional' }, { dayOfWeek: 0, intent: 'rest' }], workoutDays: [day('upper-a', 'Upper A', ['machine-chest-press', 'seated-cable-row', 'lat-pulldown']), day('lower-a', 'Lower A', ['leg-press', 'leg-curl', 'dumbbell-rdl']), day('upper-b', 'Upper B', ['dumbbell-floor-press', 'one-arm-dumbbell-row', 'assisted-pullup']), day('lower-b', 'Lower B', ['goblet-box-squat', 'dumbbell-rdl', 'leg-curl'])] }
+}
+function day(id: string, title: string, exerciseIds: string[]) { return { id, title, estimatedMinutes: 45, exercises: exerciseIds.map((exerciseId, index) => ({ exerciseId, sets: 3, repRange: { min: 8, max: 12 }, restSeconds: index === 0 ? 120 : 90, priority: index === 0 ? 'primary' as const : 'accessory' as const })) } }
