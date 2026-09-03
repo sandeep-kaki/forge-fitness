@@ -22,10 +22,43 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const setStep = (next: number | ((current: number) => number)) => setDraft((current) => ({ ...current, step: typeof next === 'function' ? next(current.step) : next }))
   const setName = (name: string) => setDraft((current) => ({ ...current, name })); const setGoal = (goal: TrainingGoal) => setDraft((current) => ({ ...current, goal })); const setDays = (days: number[] | ((current: number[]) => number[])) => setDraft((current) => ({ ...current, days: typeof days === 'function' ? days(current.days) : days })); const setDuration = (duration: 30 | 45 | 60) => setDraft((current) => ({ ...current, duration })); const setTime = (time: string) => setDraft((current) => ({ ...current, time })); const setExperience = (experience: ExperienceLevel) => setDraft((current) => ({ ...current, experience })); const setEquipment = (equipment: string[] | ((current: string[]) => string[])) => setDraft((current) => ({ ...current, equipment: typeof equipment === 'function' ? equipment(current.equipment) : equipment })); const setMedical = (medical: boolean) => setDraft((current) => ({ ...current, medical })); const setEmergency = (emergency: boolean) => setDraft((current) => ({ ...current, emergency }))
   useEffect(() => { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)) }, [draft])
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storedStep = window.history.state?.forgeOnboarding?.step
+    if (typeof storedStep === 'number' && storedStep >= 0 && storedStep <= 7) {
+      setDraft((current) => ({ ...current, step: storedStep }))
+    } else {
+      window.history.replaceState({ forgeOnboarding: { step: draft.step, historyIndex: 0 } }, '')
+    }
+
+    const onPopState = (event: PopStateEvent) => {
+      const state = event.state?.forgeOnboarding
+      if (state && typeof state.step === 'number') {
+        setDraft((current) => ({ ...current, step: state.step }))
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
   const toggleDay = (day: number) => setDays((current) => current.includes(day) ? current.filter((item) => item !== day) : [...current, day].sort())
   const toggleEquipment = (id: string) => setEquipment((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
-  const next = () => setStep((current) => Math.min(current + 1, 7))
-  const previous = () => setStep((current) => Math.max(current - 1, 0))
+  const next = () => {
+    setStep((current) => {
+      const nextStep = Math.min(current + 1, 7)
+      if (typeof window !== 'undefined' && nextStep !== current) {
+        const prevIdx = (window.history.state?.forgeOnboarding?.historyIndex as number) ?? 0
+        window.history.pushState({ forgeOnboarding: { step: nextStep, historyIndex: prevIdx + 1 } }, '')
+      }
+      return nextStep
+    })
+  }
+  const previous = () => {
+    if (typeof window !== 'undefined' && (window.history.state?.forgeOnboarding?.historyIndex as number) > 0) {
+      window.history.back()
+    } else {
+      setStep((current) => Math.max(current - 1, 0))
+    }
+  }
   const finish = () => {
     const now = new Date().toISOString(); const profileId = crypto.randomUUID()
     onComplete({ schemaVersion: APP_SCHEMA_VERSION, profile: { id: profileId, displayName: name.trim() || 'Athlete', goal, experience, availableDays: days, preferredDurationMinutes: duration, preferredTrainingTime: time, createdAt: now, updatedAt: now }, inventory: { profileId, availableEquipmentIds: equipment, updatedAt: now }, safety: { acknowledgedAt: now, version: 1, understandsEmergencyStop: emergency, understandsNotMedicalAdvice: medical }, workoutSettings: { preferredDurationMinutes: duration, voiceEnabled: false, announceRestCountdown: false }, appSettings: { theme: 'dark', reducedMotion: false, schemaVersion: APP_SCHEMA_VERSION }, plans: [] }); sessionStorage.removeItem(DRAFT_KEY)
