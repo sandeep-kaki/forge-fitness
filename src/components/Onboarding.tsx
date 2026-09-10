@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { equipmentCatalog } from '../data/equipment'
+import { createFoundationStarterPlan } from '../data/starterPlan'
 import { APP_SCHEMA_VERSION, type ExperienceLevel, type LocalAppData, type TrainingGoal } from '../domain/types'
 
 type OnboardingProps = { onComplete: (data: LocalAppData) => void }
@@ -61,7 +62,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   }
   const finish = () => {
     const now = new Date().toISOString(); const profileId = crypto.randomUUID()
-    onComplete({ schemaVersion: APP_SCHEMA_VERSION, profile: { id: profileId, displayName: name.trim() || 'Athlete', goal, experience, availableDays: days, preferredDurationMinutes: duration, preferredTrainingTime: time, createdAt: now, updatedAt: now }, inventory: { profileId, availableEquipmentIds: equipment, updatedAt: now }, safety: { acknowledgedAt: now, version: 1, understandsEmergencyStop: emergency, understandsNotMedicalAdvice: medical }, workoutSettings: { preferredDurationMinutes: duration, voiceEnabled: false, announceRestCountdown: false }, appSettings: { theme: 'dark', reducedMotion: false, schemaVersion: APP_SCHEMA_VERSION }, plans: [] }); sessionStorage.removeItem(DRAFT_KEY)
+    const plan = createFoundationStarterPlan(profileId); plan.status = 'active'
+    onComplete({ schemaVersion: APP_SCHEMA_VERSION, profile: { id: profileId, displayName: name.trim() || 'Athlete', goal, experience, availableDays: days, preferredDurationMinutes: duration, preferredTrainingTime: time, createdAt: now, updatedAt: now }, inventory: { profileId, availableEquipmentIds: equipment, updatedAt: now }, safety: { acknowledgedAt: now, version: 1, understandsEmergencyStop: emergency, understandsNotMedicalAdvice: medical }, workoutSettings: { preferredDurationMinutes: duration, voiceEnabled: false, announceRestCountdown: false }, appSettings: { theme: 'dark', reducedMotion: false, schemaVersion: APP_SCHEMA_VERSION }, activePlanId: plan.id, plans: [plan], sessions: [], bodyWeightEntries: [] }); sessionStorage.removeItem(DRAFT_KEY)
   }
   const canContinue = canProceed(draft)
   return <main className="onboarding"><header className="onboard-top"><div className="wordmark"><span>F</span>FORGE</div><span className="onboard-count">{step + 1} / 8</span></header><div className="onboard-progress"><i style={{ width: `${((step + 1) / 8) * 100}%` }} /></div><section className="onboard-content">

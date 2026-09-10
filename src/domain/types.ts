@@ -1,5 +1,5 @@
 /** Domain-only contracts. UI never depends on a plan's exercise logic. */
-export const APP_SCHEMA_VERSION = 1
+export const APP_SCHEMA_VERSION = 2
 export type TrainingGoal = 'muscle_gain' | 'strength' | 'general_fitness' | 'mobility'
 export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced'
 export type AppTheme = 'light' | 'dark' | 'system'
@@ -18,6 +18,14 @@ export interface Exercise { id: string; displayName: string; primaryMuscles: str
 export interface ExerciseVideo { title: string; creator: string; platform: 'youtube'; url: string; durationSeconds?: number; verified: boolean; lastReviewedAt: string }
 export interface ExerciseSubstitution { exerciseId: string; score: number; reason: string }
 export interface ExerciseLibraryEntry extends Exercise { secondaryMuscles: string[]; movementPattern: 'horizontal_push' | 'horizontal_pull' | 'vertical_pull' | 'knee_dominant' | 'hip_hinge' | 'isolation'; setupInstructions: string[]; breathingCue: string; tempoCue?: string; commonMistakes: string[]; safetyNotes: string[]; regressions: string[]; progressions: string[]; substitutions: ExerciseSubstitution[]; mediaType: 'youtube' | 'none'; videos: ExerciseVideo[] }
-export interface WorkoutSession { id: string; profileId: string; planId: string; startedAt: string; status: 'active' | 'completed' | 'abandoned' }
+export type WorkoutMode = 'ready' | 'set_active' | 'resting' | 'waiting_for_equipment' | 'safety_stop'
+export interface ExerciseSet { id: string; completedAt: string; weightKg: number; reps: number; rir?: 0 | 1 | 2 | 3; form: 'good' | 'needs_attention'; pain: boolean }
+export interface SessionExercise { plannedExerciseId: string; exerciseId: string; targetSets: number; repRange: { min: number; max: number }; restSeconds: number; priority: 'primary' | 'accessory'; sets: ExerciseSet[]; skipped?: boolean; substitutionFor?: string }
+export interface SubstitutionEvent { id: string; at: string; fromExerciseId: string; toExerciseId: string }
+export interface SafetyEvent { id: string; at: string; symptom: string }
+export interface WorkoutSession {
+  id: string; profileId: string; planId: string; workoutDayId: string; title: string; startedAt: string; completedAt?: string; status: 'active' | 'completed' | 'abandoned';
+  exercises: SessionExercise[]; currentExerciseIndex: number; mode: WorkoutMode; restStartedAt?: string; waitStartedAt?: string; totalWaitSeconds: number; substitutions: SubstitutionEvent[]; safetyEvents: SafetyEvent[]; reflection?: { energy: number; difficulty: number; pain: boolean }
+}
 export interface BodyWeightEntry { id: string; profileId: string; recordedAt: string; kilograms: number }
-export interface LocalAppData { schemaVersion: typeof APP_SCHEMA_VERSION; profile: UserProfile; inventory: EquipmentInventory; safety: SafetyAcknowledgement; workoutSettings: WorkoutSettings; appSettings: AppSettings; /** Future imports write a validated, versioned plan here. */ activePlanId?: string; plans: WorkoutPlan[] }
+export interface LocalAppData { schemaVersion: typeof APP_SCHEMA_VERSION; profile: UserProfile; inventory: EquipmentInventory; safety: SafetyAcknowledgement; workoutSettings: WorkoutSettings; appSettings: AppSettings; activePlanId?: string; plans: WorkoutPlan[]; sessions: WorkoutSession[]; bodyWeightEntries: BodyWeightEntry[] }
